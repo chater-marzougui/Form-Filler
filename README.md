@@ -20,7 +20,9 @@ An intelligent Chrome extension that automatically fills Google Forms and Micros
 
 ## 🚀 Installation
 
-### From Source
+For detailed installation instructions, see [INSTALLATION.md](docs/INSTALLATION.md).
+
+### Quick Start
 
 1. Clone this repository:
    ```bash
@@ -153,9 +155,17 @@ Form-Filler/
 - Check that "Developer mode" is enabled in chrome://extensions/
 - Try removing and re-adding the extension
 
+## 📚 Documentation
+
+- **[Installation Guide](docs/INSTALLATION.md)** - Detailed installation instructions
+- **[Usage Guide](docs/USAGE.md)** - How to use the extension effectively
+- **[API Documentation](docs/API.md)** - Technical API and architecture details
+- **[Testing Guide](docs/TESTING.md)** - Manual and automated testing procedures
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
+
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
 ## 📄 License
 
