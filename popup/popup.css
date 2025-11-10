@@ -1,0 +1,209 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 350px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #333;
+}
+
+.container {
+  background: white;
+  border-radius: 0;
+}
+
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+.logo {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.status {
+  padding: 15px 20px;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4caf50;
+}
+
+.status-indicator.loading {
+  background: #ff9800;
+  animation: pulse 1.5s infinite;
+}
+
+.status-indicator.error {
+  background: #f44336;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+#statusText {
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+}
+
+.actions {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn {
+  width: 100%;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: #f8f9fa;
+  color: #666;
+  border: 1px solid #e9ecef;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #e9ecef;
+  border-color: #dee2e6;
+}
+
+.btn-icon {
+  font-size: 16px;
+}
+
+.info {
+  padding: 0 20px 20px;
+}
+
+.info-text {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.info.error .info-text {
+  color: #f44336;
+}
+
+.info.success .info-text {
+  color: #4caf50;
+}
+
+.footer {
+  border-top: 1px solid #e9ecef;
+  padding: 15px 20px;
+  background: #f8f9fa;
+}
+
+.toggle-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 13px;
+  color: #666;
+}
+
+.toggle input[type="checkbox"] {
+  display: none;
+}
+
+.toggle-slider {
+  position: relative;
+  width: 40px;
+  height: 20px;
+  background: #ccc;
+  border-radius: 20px;
+  margin-right: 10px;
+  transition: background 0.3s;
+}
+
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+}
+
+.toggle input[type="checkbox"]:checked + .toggle-slider {
+  background: #667eea;
+}
+
+.toggle input[type="checkbox"]:checked + .toggle-slider::after {
+  transform: translateX(20px);
+}
+
+.toggle-label {
+  flex: 1;
+}
