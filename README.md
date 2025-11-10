@@ -2,6 +2,8 @@
 
 An intelligent Chrome extension that automatically fills Google Forms and Microsoft Forms using AI-powered analysis from Gemini 2.5 Flash.
 
+> 💡 **New to Form Filler AI?** Check out the [Quick Start Guide](QUICKSTART.md) to get started in 5 minutes!
+
 ## ✨ Features
 
 - 🎯 **Smart Form Detection**: Automatically detects and analyzes Google Forms and Microsoft Forms
