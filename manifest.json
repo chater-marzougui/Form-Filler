@@ -3,11 +3,7 @@
   "name": "Form Filler AI",
   "version": "1.0.0",
   "description": "Auto-fill Google Forms and Microsoft Forms using AI (Gemini 2.5 Flash)",
-  "permissions": [
-    "storage",
-    "activeTab",
-    "scripting"
-  ],
+  "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [
     "https://docs.google.com/forms/*",
     "https://forms.office.com/*",
@@ -15,13 +11,12 @@
     "https://generativelanguage.googleapis.com/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://docs.google.com/forms/*"
-      ],
+      "matches": ["https://docs.google.com/forms/*"],
       "js": ["content-scripts/google-forms.js"],
       "css": ["styles/highlight.css"],
       "run_at": "document_idle"

@@ -14,6 +14,7 @@ Thank you for your interest in contributing to Form Filler AI! This document pro
 ### Reporting Bugs
 
 If you find a bug, please create an issue with:
+
 - Clear description of the problem
 - Steps to reproduce
 - Expected vs actual behavior
@@ -23,6 +24,7 @@ If you find a bug, please create an issue with:
 ### Suggesting Features
 
 Feature suggestions are welcome! Please:
+
 - Check if the feature has already been suggested
 - Provide a clear use case
 - Explain how it would benefit users
@@ -82,6 +84,7 @@ Form-Filler/
 Before submitting a PR:
 
 1. **Manual Testing**
+
    - Test on Google Forms
    - Test on Microsoft Forms
    - Try different field types
@@ -89,6 +92,7 @@ Before submitting a PR:
    - Verify UI/UX changes
 
 2. **Browser Testing**
+
    - Test in Chrome
    - Test in Edge (Chromium)
    - Verify in different screen sizes
@@ -118,6 +122,7 @@ Before submitting a PR:
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -127,6 +132,7 @@ Before submitting a PR:
 - `chore`: Maintenance tasks
 
 **Examples:**
+
 ```
 feat: Add support for linear scale questions
 
@@ -148,6 +154,7 @@ Fixes #38
 ### Areas for Contribution
 
 #### High Priority
+
 - Additional form platform support (Typeform, JotForm, etc.)
 - Improved field detection accuracy
 - Better error handling and user feedback
@@ -155,6 +162,7 @@ Fixes #38
 - Accessibility improvements
 
 #### Medium Priority
+
 - Internationalization (i18n)
 - Keyboard shortcuts
 - Form templates
@@ -162,6 +170,7 @@ Fixes #38
 - Dark mode
 
 #### Low Priority
+
 - Custom themes
 - Statistics/analytics
 - Export/import profiles
@@ -181,6 +190,7 @@ To add support for a new form platform:
 6. Add documentation
 
 Example structure:
+
 ```javascript
 // content-scripts/platform-name.js
 
@@ -233,6 +243,7 @@ To improve answer generation:
 ## Questions?
 
 If you have questions:
+
 - Check existing documentation
 - Search closed issues
 - Open a new issue with your question
@@ -245,6 +256,7 @@ By contributing, you agree that your contributions will be licensed under the MI
 ## Recognition
 
 Contributors will be acknowledged in:
+
 - README.md (Contributors section)
 - Release notes
 - Project documentation

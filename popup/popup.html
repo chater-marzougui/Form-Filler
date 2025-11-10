@@ -1,58 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Form Filler AI</title>
-  <link rel="stylesheet" href="popup.css">
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">🤖</div>
-      <h1>Form Filler AI</h1>
-    </div>
-    
-    <div class="status" id="status">
-      <span class="status-indicator" id="statusIndicator"></span>
-      <span id="statusText">Ready</span>
-    </div>
-    
-    <div class="actions">
-      <button id="fillBtn" class="btn btn-primary">
-        <span class="btn-icon">✨</span>
-        Fill Current Form
-      </button>
-      
-      <button id="optionsBtn" class="btn btn-secondary">
-        <span class="btn-icon">⚙️</span>
-        Settings
-      </button>
-    </div>
-    
-    <div class="info" id="info">
-      <p class="info-text">
-        Navigate to a Google Form or Microsoft Form, then click "Fill Current Form" to auto-fill using AI.
-      </p>
-    </div>
-    
-    <div class="footer">
-      <div class="toggle-group">
-        <label class="toggle">
-          <input type="checkbox" id="autoFillToggle">
-          <span class="toggle-slider"></span>
-          <span class="toggle-label">Auto-fill on load</span>
-        </label>
-        
-        <label class="toggle">
-          <input type="checkbox" id="highlightToggle">
-          <span class="toggle-slider"></span>
-          <span class="toggle-label">Highlight filled fields</span>
-        </label>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Form Filler AI</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="logo">🤖</div>
+        <h1>Form Filler AI</h1>
+      </div>
+
+      <div class="status" id="status">
+        <span class="status-indicator" id="statusIndicator"></span>
+        <span id="statusText">Ready</span>
+      </div>
+
+      <div class="actions">
+        <button id="fillBtn" class="btn btn-primary">
+          <span class="btn-icon">✨</span>
+          Fill Current Form
+        </button>
+
+        <button id="optionsBtn" class="btn btn-secondary">
+          <span class="btn-icon">⚙️</span>
+          Settings
+        </button>
+      </div>
+
+      <div class="info" id="info">
+        <p class="info-text">
+          Navigate to a Google Form or Microsoft Form, then click "Fill Current
+          Form" to auto-fill using AI.
+        </p>
+      </div>
+
+      <div class="footer">
+        <div class="toggle-group">
+          <label class="toggle">
+            <input type="checkbox" id="autoFillToggle" />
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">Auto-fill on load</span>
+          </label>
+
+          <label class="toggle">
+            <input type="checkbox" id="highlightToggle" />
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">Highlight filled fields</span>
+          </label>
+        </div>
       </div>
     </div>
-  </div>
-  
-  <script src="popup.js"></script>
-</body>
+
+    <script src="popup.js"></script>
+  </body>
 </html>
