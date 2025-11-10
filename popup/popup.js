@@ -15,13 +15,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   autoFillToggle.checked = settings.autoFillEnabled !== false;
   highlightToggle.checked = settings.highlightEnabled !== false;
 
-  // Check if we're on a supported form
+  // Check if we're on a supported form using proper URL parsing
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  const isSupported = tab.url && (
-    tab.url.includes('docs.google.com/forms') || 
-    tab.url.includes('forms.office.com') || 
-    tab.url.includes('forms.microsoft.com')
-  );
+  let isSupported = false;
+  try {
+    const url = new URL(tab.url);
+    const hostname = url.hostname;
+    isSupported = (hostname === 'docs.google.com' && url.pathname.startsWith('/forms')) ||
+                  hostname === 'forms.office.com' ||
+                  hostname === 'forms.microsoft.com';
+  } catch (e) {
+    // Invalid URL
+    isSupported = false;
+  }
 
   // Check if API key is configured
   const hasApiKey = settings.apiKey && settings.apiKey.length > 0;

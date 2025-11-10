@@ -56,12 +56,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Handle extension icon click
 chrome.action.onClicked.addListener((tab) => {
-  // Check if we're on a supported form
-  const url = tab.url;
-  if (url && (url.includes('docs.google.com/forms') || 
-              url.includes('forms.office.com') || 
-              url.includes('forms.microsoft.com'))) {
-    // Send message to content script to trigger form fill
-    chrome.tabs.sendMessage(tab.id, { action: 'fillForm' });
+  // Check if we're on a supported form using proper URL parsing
+  try {
+    const url = new URL(tab.url);
+    const hostname = url.hostname;
+    
+    if ((hostname === 'docs.google.com' && url.pathname.startsWith('/forms')) ||
+        hostname === 'forms.office.com' ||
+        hostname === 'forms.microsoft.com') {
+      // Send message to content script to trigger form fill
+      chrome.tabs.sendMessage(tab.id, { action: 'fillForm' });
+    }
+  } catch (e) {
+    // Invalid URL, ignore
+    console.log('Invalid URL:', e);
   }
 });
