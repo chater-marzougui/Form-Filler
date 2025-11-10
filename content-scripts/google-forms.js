@@ -93,17 +93,9 @@ function extractQuestions() {
     question.required = !!requiredElement;
 
     // Determine question type and extract options
+    // Use else-if to prevent later checks from overwriting earlier detections
 
-    // Text/Email/Phone input
-    const textInput = element.querySelector(
-      'input[type="text"], input[type="email"], input[type="tel"], textarea'
-    );
-    if (textInput) {
-      question.type = "text";
-      question.inputElement = textInput;
-    }
-
-    // Radio buttons (Multiple choice)
+    // Radio buttons (Multiple choice) - Check first as they're most specific
     const radioButtons = element.querySelectorAll('input[type="radio"]');
     if (radioButtons.length > 0) {
       question.type = "radio";
@@ -116,43 +108,62 @@ function extractQuestions() {
         return label;
       });
     }
-
-    // Checkboxes
-    const checkboxes = element.querySelectorAll('input[type="checkbox"]');
-    if (checkboxes.length > 0) {
-      question.type = "checkbox";
-      question.inputElements = Array.from(checkboxes);
-      question.options = Array.from(checkboxes).map((checkbox) => {
-        const label =
-          checkbox.closest('[role="checkbox"]')?.getAttribute("aria-label") ||
-          checkbox.closest("label")?.textContent.trim() ||
-          checkbox.value;
-        return label;
+    // Checkboxes (but exclude hidden/system checkboxes)
+    else {
+      const checkboxes = element.querySelectorAll('input[type="checkbox"]:not([style*="display: none"]):not([style*="visibility: hidden"])');
+      const visibleCheckboxes = Array.from(checkboxes).filter(cb => {
+        const rect = cb.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
       });
-    }
-
-    // Dropdown
-    const dropdown = element.querySelector("select");
-    if (dropdown) {
-      question.type = "dropdown";
-      question.inputElement = dropdown;
-      question.options = Array.from(dropdown.options)
-        .filter((opt) => opt.value)
-        .map((opt) => opt.textContent.trim());
-    }
-
-    // Date input
-    const dateInput = element.querySelector('input[type="date"]');
-    if (dateInput) {
-      question.type = "date";
-      question.inputElement = dateInput;
-    }
-
-    // Time input
-    const timeInput = element.querySelector('input[type="time"]');
-    if (timeInput) {
-      question.type = "time";
-      question.inputElement = timeInput;
+      
+      if (visibleCheckboxes.length > 0) {
+        question.type = "checkbox";
+        question.inputElements = visibleCheckboxes;
+        question.options = visibleCheckboxes.map((checkbox) => {
+          const label =
+            checkbox.closest('[role="checkbox"]')?.getAttribute("aria-label") ||
+            checkbox.closest("label")?.textContent.trim() ||
+            checkbox.value;
+          return label;
+        });
+      }
+      // Dropdown
+      else {
+        const dropdown = element.querySelector("select");
+        if (dropdown) {
+          question.type = "dropdown";
+          question.inputElement = dropdown;
+          question.options = Array.from(dropdown.options)
+            .filter((opt) => opt.value)
+            .map((opt) => opt.textContent.trim());
+        }
+        // Date input
+        else {
+          const dateInput = element.querySelector('input[type="date"]');
+          if (dateInput) {
+            question.type = "date";
+            question.inputElement = dateInput;
+          }
+          // Time input
+          else {
+            const timeInput = element.querySelector('input[type="time"]');
+            if (timeInput) {
+              question.type = "time";
+              question.inputElement = timeInput;
+            }
+            // Text/Email/Phone input (check last as it's most generic)
+            else {
+              const textInput = element.querySelector(
+                'input[type="text"], input[type="email"], input[type="tel"], textarea'
+              );
+              if (textInput) {
+                question.type = "text";
+                question.inputElement = textInput;
+              }
+            }
+          }
+        }
+      }
     }
 
     // Only add questions that have text and input elements

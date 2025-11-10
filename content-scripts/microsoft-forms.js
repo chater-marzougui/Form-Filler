@@ -1,10 +1,5 @@
 // Microsoft Forms Content Script
 
-// Import Gemini API
-const geminiScript = document.createElement("script");
-geminiScript.src = chrome.runtime.getURL("lib/gemini.js");
-document.head.appendChild(geminiScript);
-
 let config = null;
 let isProcessing = false;
 
@@ -70,12 +65,71 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 function extractQuestions() {
   const questions = [];
 
-  // Microsoft Forms structure: questions are typically in div elements with specific data attributes
-  const questionElements = document.querySelectorAll(
-    '[data-automation-id="questionItem"], .office-form-question, [class*="question"]'
+  // Try multiple selectors to find all question containers
+  const possibleSelectors = [
+    '[data-automation-id="questionItem"]',
+    ".office-form-question",
+    '[class*="questionContainer"]',
+    '[class*="question-item"]',
+    'div[role="group"]', // Microsoft Forms often uses role="group" for questions
+  ];
+
+  let questionElements = [];
+
+  // Try each selector until we find questions
+  for (const selector of possibleSelectors) {
+    questionElements = document.querySelectorAll(selector);
+    if (questionElements.length > 0) {
+      console.log(
+        `Found ${questionElements.length} questions using selector: ${selector}`
+      );
+      break;
+    }
+  }
+
+  // Fallback: if still no questions found, look for any div containing input elements
+  if (questionElements.length === 0) {
+    console.log("Using fallback method to detect questions");
+    const allInputs = document.querySelectorAll(
+      'input:not([type="hidden"]), textarea, select'
+    );
+    const questionSet = new Set();
+
+    allInputs.forEach((input) => {
+      // Find the closest parent that looks like a question container
+      let parent =
+        input.closest('div[class*="question"]') ||
+        input.closest("div[data-automation-id]") ||
+        input.closest('div[role="group"]');
+
+      // If no specific container found, use a parent div that's big enough
+      if (!parent) {
+        parent = input.parentElement;
+        let depth = 0;
+        while (parent && depth < 5) {
+          if (parent.tagName === "DIV" && parent.offsetHeight > 50) {
+            break;
+          }
+          parent = parent.parentElement;
+          depth++;
+        }
+      }
+
+      if (parent && !questionSet.has(parent)) {
+        questionSet.add(parent);
+        questionElements = Array.from(questionSet);
+      }
+    });
+  }
+
+  console.log(
+    `Processing ${questionElements.length} potential question elements`
   );
 
   questionElements.forEach((element, index) => {
+    console.log(`\n--- Analyzing element ${index + 1} ---`);
+    console.log('Element:', element);
+    console.log('Element HTML (first 200 chars):', element.innerHTML.substring(0, 200));
     const question = {
       index,
       element,
@@ -85,54 +139,104 @@ function extractQuestions() {
       required: false,
     };
 
-    // Extract question text
-    const questionTextElement = element.querySelector(
-      '[data-automation-id="questionTitle"], .question-title, [class*="questionTitle"]'
-    );
-    if (questionTextElement) {
-      question.text = questionTextElement.textContent.trim();
-    } else {
-      // Fallback: look for any text element that might be the question
-      const textElements = element.querySelectorAll("div, span, label");
+    // Extract question text - try multiple methods
+    let questionText = "";
+
+    // Method 1: Look for specific question title elements
+    const titleSelectors = [
+      '[data-automation-id="questionTitle"]',
+      ".question-title",
+      '[class*="questionTitle"]',
+      "label",
+      "legend",
+    ];
+
+    for (const selector of titleSelectors) {
+      const titleElement = element.querySelector(selector);
+      if (titleElement) {
+        questionText = titleElement.textContent.trim();
+        break;
+      }
+    }
+
+    // Method 2: Look for text before any input element
+    if (!questionText) {
+      const allText = element.textContent.trim();
+      const inputElement = element.querySelector("input, textarea, select");
+      if (inputElement && allText) {
+        // Get text before the input
+        const walker = document.createTreeWalker(
+          element,
+          NodeFilter.SHOW_TEXT,
+          null,
+          false
+        );
+
+        let node;
+        let textParts = [];
+        while ((node = walker.nextNode())) {
+          const text = node.textContent.trim();
+          if (
+            text &&
+            text.length > 2 &&
+            !text.match(/^(Enter|Select|Choose)/i)
+          ) {
+            textParts.push(text);
+          }
+          // Stop if we've reached the input element
+          if (node.parentElement.contains(inputElement)) {
+            break;
+          }
+        }
+        questionText = textParts.join(" ").trim();
+      }
+    }
+
+    // Method 3: Fallback - use the first substantial text found
+    if (!questionText) {
+      const textElements = element.querySelectorAll("div, span, label, p");
       for (const el of textElements) {
-        const text = el.textContent.trim();
-        if (text.length > 10 && !text.includes("Required")) {
-          question.text = text;
+        // Get only direct text content, not nested
+        const text = Array.from(el.childNodes)
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((node) => node.textContent.trim())
+          .join(" ")
+          .trim();
+
+        if (
+          text.length > 5 &&
+          !text.match(/^(Required|Enter|Select|Choose)/i)
+        ) {
+          questionText = text;
           break;
         }
       }
     }
 
-    // Check if required
-    const requiredElement = element.querySelector(
-      '[aria-required="true"], .required-indicator, [class*="required"]'
-    );
-    question.required = !!requiredElement;
+    question.text = questionText;
 
-    // Determine question type and extract options
+    // Check if required - look for asterisk or required indicator
+    const requiredIndicators = [
+      '[aria-required="true"]',
+      ".required-indicator",
+      '[class*="required"]',
+    ];
 
-    // Text input
-    const textInput = element.querySelector('input[type="text"], textarea');
-    if (textInput) {
-      question.type = "text";
-      question.inputElement = textInput;
+    for (const selector of requiredIndicators) {
+      if (element.querySelector(selector)) {
+        question.required = true;
+        break;
+      }
     }
 
-    // Email input
-    const emailInput = element.querySelector('input[type="email"]');
-    if (emailInput) {
-      question.type = "text";
-      question.inputElement = emailInput;
+    // Also check if question text ends with asterisk
+    if (questionText.includes("*")) {
+      question.required = true;
     }
 
-    // Number input
-    const numberInput = element.querySelector('input[type="number"]');
-    if (numberInput) {
-      question.type = "text";
-      question.inputElement = numberInput;
-    }
+    // Determine question type and extract options/input elements
 
-    // Radio buttons (Choice - single selection)
+    // Check for radio buttons first
     const radioButtons = element.querySelectorAll('input[type="radio"]');
     if (radioButtons.length > 0) {
       question.type = "radio";
@@ -140,29 +244,29 @@ function extractQuestions() {
       question.options = Array.from(radioButtons).map((radio) => {
         const label =
           radio.closest("label")?.textContent.trim() ||
+          radio.nextSibling?.textContent?.trim() ||
           radio.getAttribute("aria-label") ||
           radio.value;
         return label;
       });
     }
-
-    // Checkboxes (Choice - multiple selection)
-    const checkboxes = element.querySelectorAll('input[type="checkbox"]');
-    if (checkboxes.length > 0) {
+    // Check for checkboxes
+    else if (element.querySelectorAll('input[type="checkbox"]').length > 0) {
+      const checkboxes = element.querySelectorAll('input[type="checkbox"]');
       question.type = "checkbox";
       question.inputElements = Array.from(checkboxes);
       question.options = Array.from(checkboxes).map((checkbox) => {
         const label =
           checkbox.closest("label")?.textContent.trim() ||
+          checkbox.nextSibling?.textContent?.trim() ||
           checkbox.getAttribute("aria-label") ||
           checkbox.value;
         return label;
       });
     }
-
-    // Dropdown
-    const dropdown = element.querySelector('select, [role="combobox"]');
-    if (dropdown) {
+    // Check for dropdown
+    else if (element.querySelector('select, [role="combobox"]')) {
+      const dropdown = element.querySelector('select, [role="combobox"]');
       question.type = "dropdown";
       question.inputElement = dropdown;
 
@@ -178,17 +282,64 @@ function extractQuestions() {
         );
       }
     }
-
-    // Date input
-    const dateInput = element.querySelector('input[type="date"]');
-    if (dateInput) {
+    // Check for date input
+    else if (element.querySelector('input[type="date"]')) {
+      const dateInput = element.querySelector('input[type="date"]');
       question.type = "date";
       question.inputElement = dateInput;
     }
+    // Check for various text-based inputs (including inputs without type attribute)
+    else {
+      // Microsoft Forms often uses inputs without explicit type or with generic type
+      const textInput = element.querySelector('input[type="text"]');
+      const emailInput = element.querySelector('input[type="email"]');
+      const telInput = element.querySelector('input[type="tel"]');
+      const numberInput = element.querySelector('input[type="number"]');
+      const textarea = element.querySelector("textarea");
+      // Also check for inputs without a type attribute or with empty type
+      const genericInput = element.querySelector('input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not([type="button"]):not([type="submit"])');
 
-    // Only add questions that have text and input elements
-    if (question.text && (question.inputElement || question.inputElements)) {
+      const input =
+        textInput || emailInput || telInput || numberInput || textarea || genericInput;
+
+      if (input) {
+        question.type = "text";
+        question.inputElement = input;
+
+        // Determine more specific type based on input
+        if (emailInput) {
+          question.subType = "email";
+        } else if (telInput) {
+          question.subType = "phone";
+        } else if (numberInput) {
+          question.subType = "number";
+        }
+        
+        console.log(`Found text input for question ${index + 1}:`, input.tagName, input.type, input);
+      } else {
+        // Debug: log all input elements in this question container
+        const allInputs = element.querySelectorAll('input, textarea');
+        console.log(`Question ${index + 1} - All inputs found (${allInputs.length}):`, 
+          Array.from(allInputs).map(inp => `${inp.tagName}[type="${inp.type}"]`).join(', '));
+      }
+    }
+
+    // Only add questions that have both text and input elements
+    if (
+      question.text &&
+      (question.inputElement ||
+        (question.inputElements && question.inputElements.length > 0))
+    ) {
+      console.log(
+        `Question ${index + 1}: "${question.text}" (${question.type})`
+      );
       questions.push(question);
+    } else {
+      console.log(
+        `Skipped element ${index + 1}: text="${question.text}", hasInput=${!!(
+          question.inputElement || question.inputElements
+        )}`
+      );
     }
   });
 
@@ -212,33 +363,41 @@ async function fillForm() {
     const questions = extractQuestions();
 
     if (questions.length === 0) {
-      throw new Error("No questions found in the form");
+      throw new Error(
+        "No questions found in the form. Please make sure you're on a Microsoft Form."
+      );
     }
 
-    console.log(`Found ${questions.length} questions`);
+    console.log(`Found ${questions.length} questions to fill`);
 
-    // Get answers from Gemini
-    const gemini = new GeminiAPI(config.apiKey);
+    // Get answers from the background script
     const questionData = questions.map((q) => ({
       text: q.text,
       type: q.type,
+      subType: q.subType,
       options: q.options,
       required: q.required,
     }));
 
-    const answers = await gemini.generateAnswers(
-      questionData,
-      config.userProfile
-    );
+    const answers = await chrome.runtime.sendMessage({
+      action: "generateAnswers",
+      questions: questionData,
+    });
+
+    if (answers.error) {
+      throw new Error(answers.error);
+    }
 
     console.log("Received answers from AI:", answers);
 
-    // Fill in the answers
+    // Fill in the answers with delays between each to allow form to update
     let filledCount = 0;
-    questions.forEach((question, index) => {
+    for (let index = 0; index < questions.length; index++) {
+      const question = questions[index];
       const answer = answers[index];
+
       if (answer && answer !== "N/A") {
-        const filled = fillQuestion(question, answer);
+        const filled = await fillQuestionWithDelay(question, answer);
         if (filled) {
           filledCount++;
 
@@ -248,7 +407,10 @@ async function fillForm() {
           }
         }
       }
-    });
+
+      // Small delay between filling questions
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
 
     // Hide loading indicator
     hideLoadingIndicator();
@@ -272,6 +434,19 @@ async function fillForm() {
   } finally {
     isProcessing = false;
   }
+}
+
+// Fill a single question with an answer (with Promise support for delays)
+async function fillQuestionWithDelay(question, answer) {
+  return new Promise((resolve) => {
+    try {
+      const result = fillQuestion(question, answer);
+      resolve(result);
+    } catch (error) {
+      console.error(`Error filling question "${question.text}":`, error);
+      resolve(false);
+    }
+  });
 }
 
 // Fill a single question with an answer
@@ -378,11 +553,13 @@ function fillQuestion(question, answer) {
 
 // Highlight filled element
 function highlightElement(element) {
-  element.classList.add("ai-filled");
+  const originalBackground = element.style.background;
+  element.style.background = "rgba(102, 126, 234, 0.1)";
+  element.style.transition = "background 0.3s ease";
 
   // Remove highlight after 3 seconds
   setTimeout(() => {
-    element.classList.remove("ai-filled");
+    element.style.background = originalBackground;
   }, 3000);
 }
 

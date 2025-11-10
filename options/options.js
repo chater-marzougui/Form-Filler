@@ -80,31 +80,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       // (Avoids eval and complies with extension CSP)
       const libUrl = chrome.runtime.getURL("lib/gemini.js");
 
-      await new Promise((resolve, reject) => {
-        // If the class is already available, resolve immediately
-        if (typeof GeminiAPI !== "undefined") {
-          return resolve();
-        }
+      // Use dynamic import to load the ES module
+      const module = await import(libUrl);
+      const GeminiAPI = module.default;
 
-        // Avoid adding the same script twice
-        const existing = document.querySelector(`script[src="${libUrl}"]`);
-        if (existing) {
-          existing.addEventListener("load", resolve);
-          existing.addEventListener("error", () =>
-            reject(new Error("Failed to load gemini.js"))
-          );
-          return;
-        }
-
-        const script = document.createElement("script");
-        script.src = libUrl;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error("Failed to load gemini.js"));
-        document.head.appendChild(script);
-      });
-
-      // GeminiAPI should now be available in the page scope
-      if (typeof GeminiAPI === "undefined") {
+      if (!GeminiAPI) {
         throw new TypeError("GeminiAPI not found after loading library");
       }
 
