@@ -8,50 +8,61 @@
   </head>
   <body>
     <div class="container">
-      <div class="header">
-        <div class="logo">🤖</div>
-        <h1>Form Filler AI</h1>
-      </div>
+      <header class="header">
+        <div class="header-content">
+          <img class="logo" src="../icons/icon128.png" alt="Form Filler AI Logo" />
+          <h1>Form Filler AI</h1>
+        </div>
+      </header>
 
-      <div class="status" id="status">
-        <span class="status-indicator" id="statusIndicator"></span>
-        <span id="statusText">Ready</span>
-      </div>
+      <main class="main-content">
+        <div class="status-card" id="status">
+          <div class="status-dot" id="statusIndicator"></div>
+          <span class="status-text" id="statusText">Ready</span>
+        </div>
 
-      <div class="actions">
-        <button id="fillBtn" class="btn btn-primary">
-          <span class="btn-icon">✨</span>
-          Fill Current Form
+        <button id="fillBtn" class="btn-primary">
+          <svg class="btn-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 2L12.5 7L18 8L14 12L15 18L10 15L5 18L6 12L2 8L7.5 7L10 2Z" fill="currentColor"/>
+          </svg>
+          Fill Form
         </button>
 
-        <button id="optionsBtn" class="btn btn-secondary">
-          <span class="btn-icon">⚙️</span>
-          Settings
-        </button>
-      </div>
+        <div class="info-card" id="info">
+          <p class="info-text">
+            Open a Google Form or Microsoft Form to get started
+          </p>
+        </div>
 
-      <div class="info" id="info">
-        <p class="info-text">
-          Navigate to a Google Form or Microsoft Form, then click "Fill Current
-          Form" to auto-fill using AI.
-        </p>
-      </div>
-
-      <div class="footer">
-        <div class="toggle-group">
-          <label class="toggle">
-            <input type="checkbox" id="autoFillToggle" />
-            <span class="toggle-slider"></span>
-            <span class="toggle-label">Auto-fill on load</span>
+        <div class="settings-group">
+          <label class="setting-item">
+            <span class="setting-label">Auto-fill on load</span>
+            <div class="toggle-switch">
+              <input type="checkbox" id="autoFillToggle" />
+              <span class="toggle-track"></span>
+            </div>
           </label>
 
-          <label class="toggle">
-            <input type="checkbox" id="highlightToggle" />
-            <span class="toggle-slider"></span>
-            <span class="toggle-label">Highlight filled fields</span>
+          <label class="setting-item">
+            <span class="setting-label">Highlight filled fields</span>
+            <div class="toggle-switch">
+              <input type="checkbox" id="highlightToggle" />
+              <span class="toggle-track"></span>
+            </div>
           </label>
         </div>
-      </div>
+      </main>
+
+      <footer class="footer">
+        <button id="optionsBtn" class="btn-link">
+          <div class="btn-icon-wrapper">
+            <svg class="btn-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10 2L12.5 7L18 8L14 12L15 18L10 15L5 18L6 12L2 8L7.5 7L10 2Z" fill="currentColor"/>
+            </svg>
+          </div>
+          Settings
+        </button>
+      </footer>
     </div>
 
     <script src="popup.js"></script>
