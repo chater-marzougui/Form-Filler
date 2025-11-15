@@ -27,6 +27,8 @@ chrome.runtime.onInstalled.addListener((details) => {
       apiKey: "",
       autoFillEnabled: true,
       highlightEnabled: true,
+      collectDataEnabled: false,
+      collectedAnswers: [],
     });
     // Open options page on first install
     chrome.runtime.openOptionsPage();
@@ -38,7 +40,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getConfig") {
     // Return configuration to content script
     chrome.storage.local.get(
-      ["apiKey", "userProfile", "autoFillEnabled", "highlightEnabled"],
+      ["apiKey", "userProfile", "autoFillEnabled", "highlightEnabled", "collectDataEnabled"],
       (data) => {
         sendResponse(data);
       }
@@ -50,10 +52,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Handle form filling request from content script
     (async () => {
       try {
-        // Get API key and user profile from storage
-        const { apiKey, userProfile } = await chrome.storage.local.get([
+        // Get API key, user profile, and collected answers from storage
+        const { apiKey, userProfile, collectedAnswers } = await chrome.storage.local.get([
           "apiKey",
           "userProfile",
+          "collectedAnswers",
         ]);
 
         if (!apiKey) {
@@ -76,7 +79,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const gemini = new GeminiAPI(apiKey);
         const answers = await gemini.generateAnswers(
           request.questions,
-          userProfile
+          userProfile,
+          collectedAnswers || []
         );
 
         // Send answers back to content script
@@ -86,6 +90,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({
           error: error.message || "Failed to generate answers from AI",
         });
+      }
+    })();
+    return true; // Keep channel open for async response
+  }
+
+  if (request.action === "saveAnswers") {
+    // Save collected question-answer pairs
+    (async () => {
+      try {
+        const { collectedAnswers } = await chrome.storage.local.get(["collectedAnswers"]);
+        const currentAnswers = collectedAnswers || [];
+        
+        // Add new answers, limiting to last 100 entries to prevent storage overflow
+        const updatedAnswers = [...currentAnswers, ...request.answers].slice(-100);
+        
+        await chrome.storage.local.set({ collectedAnswers: updatedAnswers });
+        sendResponse({ success: true });
+      } catch (error) {
+        console.error("Error saving answers:", error);
+        sendResponse({ error: error.message });
       }
     })();
     return true; // Keep channel open for async response

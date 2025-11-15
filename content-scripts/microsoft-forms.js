@@ -356,9 +356,6 @@ async function fillForm() {
   isProcessing = true;
 
   try {
-    // Show loading indicator
-    showLoadingIndicator();
-
     // Extract questions
     const questions = extractQuestions();
 
@@ -370,6 +367,9 @@ async function fillForm() {
 
     console.log(`Found ${questions.length} questions to fill`);
 
+    // Show loading indicator (non-blocking)
+    showLoadingIndicator();
+
     // Get answers from the background script
     const questionData = questions.map((q) => ({
       text: q.text,
@@ -379,6 +379,7 @@ async function fillForm() {
       required: q.required,
     }));
 
+    // Request answers asynchronously without blocking UI
     const answers = await chrome.runtime.sendMessage({
       action: "generateAnswers",
       questions: questionData,
@@ -390,8 +391,13 @@ async function fillForm() {
 
     console.log("Received answers from AI:", answers);
 
+    // Hide loading indicator
+    hideLoadingIndicator();
+
     // Fill in the answers with delays between each to allow form to update
     let filledCount = 0;
+    const collectedQA = [];
+    
     for (let index = 0; index < questions.length; index++) {
       const question = questions[index];
       const answer = answers[index];
@@ -400,6 +406,16 @@ async function fillForm() {
         const filled = await fillQuestionWithDelay(question, answer);
         if (filled) {
           filledCount++;
+
+          // Collect question-answer pair if enabled
+          if (config.collectDataEnabled) {
+            collectedQA.push({
+              question: question.text,
+              answer: answer,
+              type: question.type,
+              timestamp: new Date().toISOString(),
+            });
+          }
 
           // Highlight filled field
           if (config.highlightEnabled) {
@@ -412,8 +428,13 @@ async function fillForm() {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
-    // Hide loading indicator
-    hideLoadingIndicator();
+    // Save collected answers if any
+    if (collectedQA.length > 0) {
+      chrome.runtime.sendMessage({
+        action: "saveAnswers",
+        answers: collectedQA,
+      });
+    }
 
     // Show success message
     showMessage(
@@ -572,27 +593,30 @@ function showLoadingIndicator() {
     indicator.innerHTML = `
       <div style="
         position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+        top: 20px;
+        right: 20px;
         background: white;
-        padding: 30px 40px;
-        border-radius: 15px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        padding: 20px 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         z-index: 10001;
-        text-align: center;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        max-width: 320px;
       ">
         <div style="
-          width: 50px;
-          height: 50px;
-          border: 5px solid #f3f3f3;
-          border-top: 5px solid #667eea;
+          width: 40px;
+          height: 40px;
+          border: 4px solid #f3f3f3;
+          border-top: 4px solid #667eea;
           border-radius: 50%;
           animation: spin 1s linear infinite;
-          margin: 0 auto 15px;
+          flex-shrink: 0;
         "></div>
-        <div style="font-size: 16px; font-weight: bold; color: #333;">
-          AI is analyzing the form...
+        <div style="font-size: 14px; font-weight: 500; color: #333;">
+          AI is analyzing the form...<br>
+          <small style="color: #666; font-weight: normal;">You can continue browsing</small>
         </div>
       </div>
     `;
@@ -608,7 +632,7 @@ function showLoadingIndicator() {
     `;
     document.head.appendChild(style);
   }
-  indicator.style.display = "block";
+  indicator.style.display = "flex";
 }
 
 // Hide loading indicator
