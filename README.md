@@ -10,6 +10,8 @@ An intelligent Chrome extension that automatically fills Google Forms and Micros
 - 🧠 **AI-Powered Filling**: Uses Google's Gemini 2.5 Flash to intelligently match user profile data to form questions
 - 📝 **Multi-Input Support**: Handles text inputs, radio buttons, checkboxes, dropdowns, and date fields
 - ✅ **Visual Feedback**: Highlights filled fields with smooth animations
+- 🎓 **Learning Mode**: Optionally collect answers from filled forms to improve future predictions
+- ⚡ **Non-Blocking UI**: AI generation happens in background, allowing you to continue browsing
 - 💾 **Persistent Storage**: Stores user profile and preferences securely using chrome.storage
 - 🎨 **Clean UI**: Beautiful popup and options page with modern design
 - 🔒 **Security-First**: Respects browser permissions and security policies (no cross-origin hacks)

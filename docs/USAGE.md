@@ -55,10 +55,13 @@ The extension automatically detects when you're on:
 When you trigger the form fill:
 
 1. **Extraction**: The extension scans the page and extracts all form questions
-2. **Analysis**: Questions are sent to Gemini 2.5 Flash along with your profile
+2. **Analysis**: Questions are sent to Gemini 2.5 Flash along with your profile and previously learned answers
 3. **Matching**: AI intelligently matches your profile data to each question
 4. **Filling**: Answers are automatically filled into the appropriate fields
-5. **Feedback**: Filled fields are highlighted with visual indicators
+5. **Learning** (optional): If enabled, question-answer pairs are saved locally for future reference
+6. **Feedback**: Filled fields are highlighted with visual indicators
+
+**Note**: The AI processing happens in the background, so you can continue browsing or interacting with the page while waiting.
 
 ### Field Type Handling
 
@@ -88,6 +91,9 @@ Keep your profile information current for best results.
 
 ### 5. Test Your API Key
 Use the "Test API Key" button in settings to verify your Gemini API is working.
+
+### 6. Enable Learning Mode (Optional)
+Turn on "Learn from my answers" in Settings to collect question-answer pairs from filled forms. This helps the AI make better predictions over time by learning from your actual responses. All data is stored locally in your browser.
 
 ## Common Use Cases
 
@@ -129,9 +135,11 @@ Use the "Test API Key" button in settings to verify your Gemini API is working.
 ## Privacy Considerations
 
 - Your profile data is stored locally in your browser
-- Only sent to Gemini API when filling forms
+- Collected question-answer pairs (if learning mode is enabled) are stored locally
+- Data is only sent to Gemini API when filling forms
 - No data is stored on external servers
-- You can clear your profile data at any time from Settings
+- You can clear your profile data and collected answers at any time from Settings
+- Learning mode is opt-in and disabled by default
 
 ## Troubleshooting
 
