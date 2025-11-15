@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const autoFillToggle = document.getElementById("autoFillEnabled");
   const highlightToggle = document.getElementById("highlightEnabled");
+  const collectDataToggle = document.getElementById("collectDataEnabled");
 
   const saveBtn = document.getElementById("saveBtn");
   const resetBtn = document.getElementById("resetBtn");
@@ -33,6 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     "userProfile",
     "autoFillEnabled",
     "highlightEnabled",
+    "collectDataEnabled",
   ]);
 
   // Populate form with saved data
@@ -62,6 +64,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   autoFillToggle.checked = settings.autoFillEnabled !== false;
   highlightToggle.checked = settings.highlightEnabled !== false;
+  collectDataToggle.checked = settings.collectDataEnabled === true;
 
   // Test API key
   testApiBtn.addEventListener("click", async () => {
@@ -146,6 +149,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         userProfile: userProfile,
         autoFillEnabled: autoFillToggle.checked,
         highlightEnabled: highlightToggle.checked,
+        collectDataEnabled: collectDataToggle.checked,
       });
 
       showStatus(saveStatus, "✓ Settings saved successfully!", "success");
@@ -193,6 +197,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       autoFillToggle.checked = true;
       highlightToggle.checked = true;
+      collectDataToggle.checked = false;
 
       // Reset storage
       await chrome.storage.local.set({
@@ -214,6 +219,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         },
         autoFillEnabled: true,
         highlightEnabled: true,
+        collectDataEnabled: false,
+        collectedAnswers: [],
       });
 
       showStatus(saveStatus, "✓ Settings reset to defaults", "success");
