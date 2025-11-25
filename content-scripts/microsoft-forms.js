@@ -80,9 +80,6 @@ function extractQuestions() {
   for (const selector of possibleSelectors) {
     questionElements = document.querySelectorAll(selector);
     if (questionElements.length > 0) {
-      console.log(
-        `Found ${questionElements.length} questions using selector: ${selector}`
-      );
       break;
     }
   }
@@ -95,7 +92,7 @@ function extractQuestions() {
     );
     const questionSet = new Set();
 
-    allInputs.forEach((input) => {
+    for (const input of allInputs) {
       // Find the closest parent that looks like a question container
       let parent =
         input.closest('div[class*="question"]') ||
@@ -119,17 +116,10 @@ function extractQuestions() {
         questionSet.add(parent);
         questionElements = Array.from(questionSet);
       }
-    });
+    }
   }
 
-  console.log(
-    `Processing ${questionElements.length} potential question elements`
-  );
-
-  questionElements.forEach((element, index) => {
-    console.log(`\n--- Analyzing element ${index + 1} ---`);
-    console.log('Element:', element);
-    console.log('Element HTML (first 200 chars):', element.innerHTML.substring(0, 200));
+  for (const [index, element] of questionElements.entries()) {
     const question = {
       index,
       element,
@@ -201,7 +191,11 @@ function extractQuestions() {
           .filter((node) => node.nodeType === Node.TEXT_NODE)
           .map((node) => node.textContent.trim())
           .join(" ")
-          .trim();
+          .trim()
+          .replace(
+            /\s*(Single choice|Rating|Ranking|Single line text|Date|Multiple choice)\.\s*$/i,
+            ""
+          );
 
         if (
           text.length > 5 &&
@@ -264,6 +258,53 @@ function extractQuestions() {
         return label;
       });
     }
+    // Check for rating (stars)
+    else if (
+      element.querySelector(
+        '[role="radiogroup"][aria-orientation="horizontal"]'
+      ) ||
+      element.querySelector('[class*="rating"]') ||
+      element.querySelector('svg path[d*="M10.701"]')
+    ) {
+      // Star SVG path
+      const ratingContainer = element.querySelector('[role="radiogroup"]');
+      if (ratingContainer) {
+        question.type = "rating";
+        const ratingOptions =
+          ratingContainer.querySelectorAll('[role="radio"]');
+        question.inputElements = Array.from(ratingOptions);
+        question.maxRating = ratingOptions.length;
+        question.options = Array.from(ratingOptions).map(
+          (_, idx) => `${idx + 1} Star${idx > 0 ? "s" : ""}`
+        );
+      }
+    }
+    // Check for ranking
+    else if (
+      element.querySelector('[role="listbox"]') ||
+      element.querySelector('[class*="ranking"]') ||
+      element.querySelector('[data-automation-id="rankingItem"]')
+    ) {
+      const rankingContainer = element.querySelector('[role="listbox"]');
+      if (rankingContainer) {
+        question.type = "ranking";
+        const rankingItems =
+          rankingContainer.querySelectorAll('[role="option"]');
+        question.inputElements = Array.from(rankingItems);
+        question.rankingButtons = element.querySelectorAll(
+          'button[aria-label*="Move option"]'
+        );
+        question.options = Array.from(rankingItems).map((item) => {
+          const contentId = item.getAttribute("aria-labelledby");
+          const contentElement = contentId
+            ? document.getElementById(contentId)
+            : null;
+          return contentElement
+            ? contentElement.textContent.trim()
+            : item.textContent.trim();
+        });
+      }
+    }
     // Check for dropdown
     else if (element.querySelector('select, [role="combobox"]')) {
       const dropdown = element.querySelector('select, [role="combobox"]');
@@ -297,10 +338,17 @@ function extractQuestions() {
       const numberInput = element.querySelector('input[type="number"]');
       const textarea = element.querySelector("textarea");
       // Also check for inputs without a type attribute or with empty type
-      const genericInput = element.querySelector('input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not([type="button"]):not([type="submit"])');
+      const genericInput = element.querySelector(
+        'input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not([type="button"]):not([type="submit"])'
+      );
 
       const input =
-        textInput || emailInput || telInput || numberInput || textarea || genericInput;
+        textInput ||
+        emailInput ||
+        telInput ||
+        numberInput ||
+        textarea ||
+        genericInput;
 
       if (input) {
         question.type = "text";
@@ -314,13 +362,15 @@ function extractQuestions() {
         } else if (numberInput) {
           question.subType = "number";
         }
-        
-        console.log(`Found text input for question ${index + 1}:`, input.tagName, input.type, input);
       } else {
         // Debug: log all input elements in this question container
-        const allInputs = element.querySelectorAll('input, textarea');
-        console.log(`Question ${index + 1} - All inputs found (${allInputs.length}):`, 
-          Array.from(allInputs).map(inp => `${inp.tagName}[type="${inp.type}"]`).join(', '));
+        const allInputs = element.querySelectorAll("input, textarea");
+        console.log(
+          `Question ${index + 1} - All inputs found (${allInputs.length}):`,
+          Array.from(allInputs)
+            .map((inp) => `${inp.tagName}[type="${inp.type}"]`)
+            .join(", ")
+        );
       }
     }
 
@@ -330,9 +380,6 @@ function extractQuestions() {
       (question.inputElement ||
         (question.inputElements && question.inputElements.length > 0))
     ) {
-      console.log(
-        `Question ${index + 1}: "${question.text}" (${question.type})`
-      );
       questions.push(question);
     } else {
       console.log(
@@ -341,7 +388,7 @@ function extractQuestions() {
         )}`
       );
     }
-  });
+  }
 
   return questions;
 }
@@ -397,7 +444,7 @@ async function fillForm() {
     // Fill in the answers with delays between each to allow form to update
     let filledCount = 0;
     const collectedQA = [];
-    
+
     for (let index = 0; index < questions.length; index++) {
       const question = questions[index];
       const answer = answers[index];
@@ -459,19 +506,17 @@ async function fillForm() {
 
 // Fill a single question with an answer (with Promise support for delays)
 async function fillQuestionWithDelay(question, answer) {
-  return new Promise((resolve) => {
-    try {
-      const result = fillQuestion(question, answer);
-      resolve(result);
-    } catch (error) {
-      console.error(`Error filling question "${question.text}":`, error);
-      resolve(false);
-    }
-  });
+  try {
+    const result = await fillQuestion(question, answer);
+    return result;
+  } catch (error) {
+    console.error(`Error filling question "${question.text}":`, error);
+    return false;
+  }
 }
 
 // Fill a single question with an answer
-function fillQuestion(question, answer) {
+async function fillQuestion(question, answer) {
   try {
     switch (question.type) {
       case "text":
@@ -487,7 +532,7 @@ function fillQuestion(question, answer) {
         );
         return true;
 
-      case "radio":
+      case "radio": {
         // Find matching option
         const radioIndex = question.options.findIndex(
           (opt) =>
@@ -499,8 +544,9 @@ function fillQuestion(question, answer) {
           return true;
         }
         break;
+      }
 
-      case "checkbox":
+      case "checkbox": {
         // Split answer by comma if multiple selections
         const selections = answer.split(",").map((s) => s.trim().toLowerCase());
         let anyChecked = false;
@@ -517,6 +563,70 @@ function fillQuestion(question, answer) {
           }
         });
         return anyChecked;
+      }
+
+      case "rating": {
+        // Parse rating from answer (e.g., "4" or "4 stars")
+        const ratingValue = parseInt(
+          answer.toString().match(/\d+/)?.[0] || answer
+        );
+        if (ratingValue >= 1 && ratingValue <= question.maxRating) {
+          const targetRating = question.inputElements[ratingValue - 1];
+          if (targetRating) {
+            targetRating.click();
+            return true;
+          }
+        }
+        break;
+      }
+      
+      case "ranking":
+        try {
+          // Parse ranking answer (could be comma-separated or array)
+          let rankingOrder = Array.isArray(answer)
+            ? answer
+            : answer.split(",").map((s) => s.trim());
+
+          // Map desired order to current positions
+          const currentOrder = [...question.options];
+
+          // Perform moves to achieve desired order
+          for (
+            let targetPos = 0;
+            targetPos < rankingOrder.length;
+            targetPos++
+          ) {
+            const desiredItem = rankingOrder[targetPos];
+            const currentPos = currentOrder.indexOf(desiredItem);
+
+            if (currentPos > targetPos) {
+              // Move up
+              const moveUpButton = question.rankingButtons[currentPos * 2]; // Up button
+              for (let i = 0; i < currentPos - targetPos; i++) {
+                moveUpButton?.click();
+                await new Promise((resolve) => setTimeout(resolve, 50));
+              }
+            } else if (currentPos < targetPos) {
+              // Move down
+              const moveDownButton =
+                question.rankingButtons[currentPos * 2 + 1]; // Down button
+              for (let i = 0; i < targetPos - currentPos; i++) {
+                moveDownButton?.click();
+                await new Promise((resolve) => setTimeout(resolve, 50));
+              }
+            }
+
+            // Update current order
+            if (currentPos !== targetPos) {
+              const [item] = currentOrder.splice(currentPos, 1);
+              currentOrder.splice(targetPos, 0, item);
+            }
+          }
+          return true;
+        } catch (e) {
+          console.error("Ranking error:", e);
+        }
+        break;
 
       case "dropdown":
         if (question.inputElement.tagName === "SELECT") {

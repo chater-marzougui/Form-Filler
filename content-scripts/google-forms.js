@@ -65,14 +65,124 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// Extract questions from Google Form
 function extractQuestions() {
   const questions = [];
 
-  // Google Forms structure: questions are in div elements with specific classes
-  const questionElements = document.querySelectorAll('[role="listitem"]');
+  // Check if we're in edit mode or response mode
+  const isEditMode = document.querySelector('.hj99tb[contenteditable="true"]');
 
-  questionElements.forEach((element, index) => {
+  if (isEditMode) {
+    // Use existing edit mode logic
+    return extractQuestionsEditMode();
+  }
+
+  // RESPONSE/FILL MODE - New logic
+  // Look for question containers with role="listitem"
+  const questionElements = document.querySelectorAll(
+    '.Qr7Oae[role="listitem"]'
+  );
+
+  for (const [index, element] of questionElements.entries()) {
+    const question = {
+      index,
+      element,
+      text: "",
+      type: "text",
+      options: [],
+      required: false,
+      inputElement: null,
+      inputElements: [],
+    };
+
+    // Extract question text from .M7eMe span
+    const questionTextElement = element.querySelector(".M7eMe");
+    if (questionTextElement) {
+      // Get text and clean up <br> tags
+      question.text = questionTextElement.textContent
+        .replaceAll("\n", " ")
+        .replaceAll(/\s+/g, " ")
+        .trim();
+    }
+
+    // Check if required - look for asterisk indicator
+    const requiredElement = element.querySelector(".vnumgf");
+    question.required = !!requiredElement;
+
+    // Find input elements to determine type
+    const textInput = element.querySelector('input[type="text"]');
+    const textArea = element.querySelector("textarea");
+    const radioInputs = element.querySelectorAll('input[type="radio"]');
+    const checkboxInputs = element.querySelectorAll('input[type="checkbox"]');
+    const selectDropdown = element.querySelector("select");
+    const dateInput = element.querySelector('input[type="date"]');
+    const timeInput = element.querySelector('input[type="time"]');
+
+    // Determine question type based on inputs found
+    if (textArea) {
+      question.type = "textarea";
+      question.inputElement = textArea;
+    } else if (textInput) {
+      // Check if it's a date or time input by aria-label or other attributes
+      const ariaLabel = textInput.getAttribute("aria-label") || "";
+      if (ariaLabel.toLowerCase().includes("date")) {
+        question.type = "date";
+      } else if (ariaLabel.toLowerCase().includes("time")) {
+        question.type = "time";
+      } else {
+        question.type = "text";
+      }
+      question.inputElement = textInput;
+    } else if (radioInputs.length > 0) {
+      question.type = "radio";
+      question.inputElements = Array.from(radioInputs);
+      // Extract options from labels
+      const labels = element.querySelectorAll("label");
+      question.options = Array.from(labels)
+        .map((label) => label.textContent.trim())
+        .filter(Boolean);
+    } else if (checkboxInputs.length > 0) {
+      question.type = "checkbox";
+      question.inputElements = Array.from(checkboxInputs);
+      const labels = element.querySelectorAll("label");
+      question.options = Array.from(labels)
+        .map((label) => label.textContent.trim())
+        .filter(Boolean);
+    } else if (selectDropdown) {
+      question.type = "dropdown";
+      question.inputElement = selectDropdown;
+      const options = selectDropdown.querySelectorAll("option");
+      question.options = Array.from(options)
+        .map((opt) => opt.textContent.trim())
+        .filter((text) => text && text !== ""); // Remove empty options
+    } else if (dateInput) {
+      question.type = "date";
+      question.inputElement = dateInput;
+    } else if (timeInput) {
+      question.type = "time";
+      question.inputElement = timeInput;
+    }
+
+    // Only add questions that have text
+    if (question.text && question.text.length > 0) {
+      questions.push(question);
+      console.log(
+        `Detected question ${index + 1}: "${question.text}" (${question.type})`
+      );
+    }
+  }
+
+  return questions;
+}
+
+// Extract questions from Google Form
+function extractQuestionsEditMode() {
+  const questions = [];
+
+  // Google Forms edit view: questions are in div elements with specific structure
+  // Look for question containers with the specific class pattern
+  const questionElements = document.querySelectorAll("[data-item-id]");
+
+  for (const [index, element] of questionElements.entries()) {
     const question = {
       index,
       element,
@@ -82,95 +192,101 @@ function extractQuestions() {
       required: false,
     };
 
-    // Extract question text
-    const questionTextElement = element.querySelector('[role="heading"]');
+    // Extract question text - look in the editable contenteditable div
+    const questionTextElement = element.querySelector(
+      '.hj99tb[contenteditable="true"]'
+    );
     if (questionTextElement) {
       question.text = questionTextElement.textContent.trim();
     }
 
-    // Check if required
-    const requiredElement = element.querySelector('[aria-label*="Required"]');
+    // Check if required - look for asterisk span
+    const requiredElement = element.querySelector(".CB23me");
     question.required = !!requiredElement;
 
-    // Determine question type and extract options
-    // Use else-if to prevent later checks from overwriting earlier detections
+    // Check for grid question type (data-value="7" or "-1")
+    const gridRadio = element.querySelector('[data-value="7"].KKjvXb');
+    const gridCheckbox = element.querySelector('[data-value="-1"].KKjvXb');
 
-    // Radio buttons (Multiple choice) - Check first as they're most specific
-    const radioButtons = element.querySelectorAll('input[type="radio"]');
-    if (radioButtons.length > 0) {
+    if (gridRadio || gridCheckbox) {
+      // This is a grid question - multiple choice grid or checkbox grid
+      question.type = gridRadio ? "grid-radio" : "grid-checkbox";
+
+      // Extract rows
+      const rowInputs = element.querySelectorAll(
+        '.Eym3Me[jsname="i036gb"] input[type="text"]'
+      );
+      question.rows = Array.from(rowInputs)
+        .map((input) => input.value.trim())
+        .filter(Boolean);
+
+      // Extract columns
+      const colInputs = element.querySelectorAll(
+        '.Eym3Me[jsname="R34Bl"] input[type="text"]'
+      );
+      question.columns = Array.from(colInputs)
+        .map((input) => input.value.trim())
+        .filter(Boolean);
+
+      question.options = question.columns; // For compatibility
+    }
+    // Check for radio buttons (Multiple choice) - data-value="2"
+    else if (element.querySelector('[data-value="2"].KKjvXb')) {
       question.type = "radio";
-      question.inputElements = Array.from(radioButtons);
-      question.options = Array.from(radioButtons).map((radio) => {
-        const label =
-          radio.closest('[role="radio"]')?.getAttribute("aria-label") ||
-          radio.closest("label")?.textContent.trim() ||
-          radio.value;
-        return label;
-      });
+      // Extract options from input fields
+      const optionInputs = element.querySelectorAll(
+        '.s1H0X input[type="text"]'
+      );
+      question.options = Array.from(optionInputs)
+        .map((input) => input.value.trim())
+        .filter(Boolean);
     }
-    // Checkboxes (but exclude hidden/system checkboxes)
+    // Check for checkboxes - data-value="4"
+    else if (element.querySelector('[data-value="4"].KKjvXb')) {
+      question.type = "checkbox";
+      const optionInputs = element.querySelectorAll(
+        '.s1H0X input[type="text"]'
+      );
+      question.options = Array.from(optionInputs)
+        .map((input) => input.value.trim())
+        .filter(Boolean);
+    }
+    // Check for dropdown - data-value="3"
+    else if (element.querySelector('[data-value="3"].KKjvXb')) {
+      question.type = "dropdown";
+      const optionInputs = element.querySelectorAll(
+        '.s1H0X input[type="text"]'
+      );
+      question.options = Array.from(optionInputs)
+        .map((input) => input.value.trim())
+        .filter(Boolean);
+    }
+    // Check for date - data-value="9"
+    else if (element.querySelector('[data-value="9"].KKjvXb')) {
+      question.type = "date";
+    }
+    // Check for time - data-value="10"
+    else if (element.querySelector('[data-value="10"].KKjvXb')) {
+      question.type = "time";
+    }
+    // Check for linear scale - data-value="5"
+    else if (element.querySelector('[data-value="5"].KKjvXb')) {
+      question.type = "linear-scale";
+      // Could extract min/max values here if needed
+    }
+    // Default to text for short answer (data-value="0") or paragraph (data-value="1")
     else {
-      const checkboxes = element.querySelectorAll('input[type="checkbox"]:not([style*="display: none"]):not([style*="visibility: hidden"])');
-      const visibleCheckboxes = Array.from(checkboxes).filter(cb => {
-        const rect = cb.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      });
-      
-      if (visibleCheckboxes.length > 0) {
-        question.type = "checkbox";
-        question.inputElements = visibleCheckboxes;
-        question.options = visibleCheckboxes.map((checkbox) => {
-          const label =
-            checkbox.closest('[role="checkbox"]')?.getAttribute("aria-label") ||
-            checkbox.closest("label")?.textContent.trim() ||
-            checkbox.value;
-          return label;
-        });
-      }
-      // Dropdown
-      else {
-        const dropdown = element.querySelector("select");
-        if (dropdown) {
-          question.type = "dropdown";
-          question.inputElement = dropdown;
-          question.options = Array.from(dropdown.options)
-            .filter((opt) => opt.value)
-            .map((opt) => opt.textContent.trim());
-        }
-        // Date input
-        else {
-          const dateInput = element.querySelector('input[type="date"]');
-          if (dateInput) {
-            question.type = "date";
-            question.inputElement = dateInput;
-          }
-          // Time input
-          else {
-            const timeInput = element.querySelector('input[type="time"]');
-            if (timeInput) {
-              question.type = "time";
-              question.inputElement = timeInput;
-            }
-            // Text/Email/Phone input (check last as it's most generic)
-            else {
-              const textInput = element.querySelector(
-                'input[type="text"], input[type="email"], input[type="tel"], textarea'
-              );
-              if (textInput) {
-                question.type = "text";
-                question.inputElement = textInput;
-              }
-            }
-          }
-        }
-      }
+      question.type = "text";
     }
 
-    // Only add questions that have text and input elements
-    if (question.text && (question.inputElement || question.inputElements)) {
+    // Only add questions that have text
+    if (question.text) {
       questions.push(question);
+      console.log(
+        `Detected question ${index + 1}: "${question.text}" (${question.type})`
+      );
     }
-  });
+  }
 
   return questions;
 }
@@ -223,11 +339,11 @@ async function fillForm() {
     // Fill in the answers
     let filledCount = 0;
     const collectedQA = [];
-    
-    questions.forEach((question, index) => {
+
+    for (const [index, question] of questions.entries()) {
       const answer = answers[index];
       if (answer && answer !== "N/A") {
-        const filled = fillQuestion(question, answer);
+        const filled = fillQuestionGoogle(question, answer);
         if (filled) {
           filledCount++;
 
@@ -247,7 +363,7 @@ async function fillForm() {
           }
         }
       }
-    });
+    }
 
     // Save collected answers if any
     if (collectedQA.length > 0) {
@@ -279,10 +395,11 @@ async function fillForm() {
 }
 
 // Fill a single question with an answer
-function fillQuestion(question, answer) {
+function fillQuestionGoogle(question, answer) {
   try {
     switch (question.type) {
       case "text":
+      case "time":
         question.inputElement.value = answer;
         question.inputElement.dispatchEvent(
           new Event("input", { bubbles: true })
@@ -292,7 +409,7 @@ function fillQuestion(question, answer) {
         );
         return true;
 
-      case "radio":
+      case "radio": {
         // Find matching option
         const radioIndex = question.options.findIndex(
           (opt) =>
@@ -304,12 +421,13 @@ function fillQuestion(question, answer) {
           return true;
         }
         break;
+      }
 
-      case "checkbox":
+      case "checkbox": {
         // Split answer by comma if multiple selections
         const selections = answer.split(",").map((s) => s.trim().toLowerCase());
         let anyChecked = false;
-        question.options.forEach((opt, idx) => {
+        for (const [idx, opt] of question.options.entries()) {
           const shouldCheck = selections.some(
             (sel) =>
               opt.toLowerCase().includes(sel) || sel.includes(opt.toLowerCase())
@@ -320,10 +438,12 @@ function fillQuestion(question, answer) {
             }
             anyChecked = true;
           }
-        });
-        return anyChecked;
+        }
 
-      case "dropdown":
+        return anyChecked;
+      }
+
+      case "dropdown": {
         const dropdownIndex = question.options.findIndex(
           (opt) =>
             opt.toLowerCase().includes(answer.toLowerCase()) ||
@@ -337,8 +457,9 @@ function fillQuestion(question, answer) {
           return true;
         }
         break;
+      }
 
-      case "date":
+      case "date": {
         // Try to parse date from answer
         const dateMatch = answer.match(/(\d{4})-(\d{2})-(\d{2})/);
         if (dateMatch) {
@@ -352,16 +473,7 @@ function fillQuestion(question, answer) {
           return true;
         }
         break;
-
-      case "time":
-        question.inputElement.value = answer;
-        question.inputElement.dispatchEvent(
-          new Event("input", { bubbles: true })
-        );
-        question.inputElement.dispatchEvent(
-          new Event("change", { bubbles: true })
-        );
-        return true;
+      }
     }
   } catch (error) {
     console.error(`Error filling question "${question.text}":`, error);
@@ -374,10 +486,10 @@ function fillQuestion(question, answer) {
 function highlightElement(element) {
   element.classList.add("ai-filled");
 
-  // Remove highlight after 3 seconds
+  // Remove highlight after 5 seconds
   setTimeout(() => {
     element.classList.remove("ai-filled");
-  }, 3000);
+  }, 5000);
 }
 
 // Show loading indicator
@@ -439,6 +551,17 @@ function hideLoadingIndicator() {
   }
 }
 
+function getBgColor(type) {
+  switch (type) {
+    case "success":
+      return "#4caf50";
+    case "error":
+      return "#f44336";
+    default:
+      return "#2196f3";
+  }
+}
+
 // Show message to user
 function showMessage(message, type = "info") {
   const messageDiv = document.createElement("div");
@@ -448,9 +571,7 @@ function showMessage(message, type = "info") {
     right: 20px;
     z-index: 10002;
     padding: 15px 25px;
-    background: ${
-      type === "success" ? "#4caf50" : type === "error" ? "#f44336" : "#2196f3"
-    };
+    background: ${getBgColor(type)};
     color: white;
     border-radius: 8px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
@@ -473,5 +594,5 @@ function showMessage(message, type = "info") {
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", init);
 } else {
-  init();
+  await init();
 }
