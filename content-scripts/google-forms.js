@@ -116,8 +116,8 @@ function extractQuestions() {
     // Find input elements to determine type
     const textInput = element.querySelector('input[type="text"]');
     const textArea = element.querySelector("textarea");
-    const radioInputs = element.querySelectorAll('input[type="radio"]');
-    const checkboxInputs = element.querySelectorAll('input[type="checkbox"]');
+    const radioInputs = element.querySelectorAll('[role="radio"]');
+    const checkboxInputs = element.querySelectorAll('[role="checkbox"]');
     const selectDropdown = element.querySelector("select");
     const dateInput = element.querySelector('input[type="date"]');
     const timeInput = element.querySelector('input[type="time"]');
@@ -140,17 +140,16 @@ function extractQuestions() {
     } else if (radioInputs.length > 0) {
       question.type = "radio";
       question.inputElements = Array.from(radioInputs);
-      // Extract options from labels
-      const labels = element.querySelectorAll("label");
-      question.options = Array.from(labels)
-        .map((label) => label.textContent.trim())
+      // Extract options from data-value attributes or aria-label
+      question.options = Array.from(radioInputs)
+        .map((radio) => radio.getAttribute("data-value") || radio.getAttribute("aria-label") || "")
         .filter(Boolean);
     } else if (checkboxInputs.length > 0) {
       question.type = "checkbox";
       question.inputElements = Array.from(checkboxInputs);
-      const labels = element.querySelectorAll("label");
-      question.options = Array.from(labels)
-        .map((label) => label.textContent.trim())
+      // Extract options from data-value attributes or aria-label
+      question.options = Array.from(checkboxInputs)
+        .map((checkbox) => checkbox.getAttribute("data-value") || checkbox.getAttribute("aria-label") || "")
         .filter(Boolean);
     } else if (selectDropdown) {
       question.type = "dropdown";
@@ -325,7 +324,7 @@ async function fillForm() {
       options: q.options,
       required: q.required,
     }));
-
+    console.log("Sending questions to background script:", questionData);
     // Request answers asynchronously without blocking UI
     const answers = await chrome.runtime.sendMessage({
       action: "generateAnswers",
