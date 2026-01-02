@@ -58,8 +58,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     statusText.textContent = 'Filling form...';
     
     try {
-      // Send message to content script to fill the form
-      await chrome.tabs.sendMessage(tab.id, { action: 'fillForm' });
+      // Try to send message to content script
+      let response;
+      try {
+        response = await chrome.tabs.sendMessage(tab.id, { action: 'fillForm' });
+      } catch (error) {
+        // Content script might not be loaded, try to inject it
+        const url = new URL(tab.url);
+        const hostname = url.hostname;
+        
+        if (hostname === 'docs.google.com') {
+          await chrome.scripting.insertCSS({
+            target: { tabId: tab.id },
+            files: ['styles/highlight.css']
+          });
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['content-scripts/google-forms.js']
+          });
+        } else if (hostname === 'forms.office.com' || hostname === 'forms.microsoft.com') {
+          await chrome.scripting.insertCSS({
+            target: { tabId: tab.id },
+            files: ['styles/highlight.css']
+          });
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['content-scripts/microsoft-forms.js']
+          });
+        }
+        
+        // Wait a moment for script to initialize
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Try sending the message again after injection
+        response = await chrome.tabs.sendMessage(tab.id, { action: 'fillForm' });
+      }
+      
+      if (response && !response.success) {
+        throw new Error(response.error || 'Failed to fill form');
+      }
       
       statusIndicator.classList.remove('loading');
       statusIndicator.classList.remove('error');

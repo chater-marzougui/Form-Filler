@@ -61,7 +61,12 @@ function addFillButton() {
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "fillForm") {
-    fillForm();
+    fillForm().then(() => {
+      sendResponse({ success: true });
+    }).catch((error) => {
+      sendResponse({ success: false, error: error.message });
+    });
+    return true; // Indicates async response
   }
 });
 
@@ -594,5 +599,5 @@ function showMessage(message, type = "info") {
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", init);
 } else {
-  await init();
+  init();
 }
